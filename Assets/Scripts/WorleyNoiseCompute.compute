@@ -1,0 +1,38 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+RWTexture2D<float4> Result;
+float Time;
+
+float random2( float2 p ) {
+    return frac(sin(float2(dot(p,float2(127.1,311.7)),dot(p,float2(269.5,183.3))))*43758.5453);
+}
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    float dist = 1;
+    for (int y = -1; y <= 1; ++y)
+    {
+        for (int x = -1; x <=1; ++x)
+        {
+            //split into boxes of 32x32 using int rounding
+            float2 box = float2((int)(id.x/32) * 32 + 32 * x, (int)(id.y/32) * 32 + 32 * y);
+
+            //if we're below zero or beyond the edge of the texture, wrap it
+            float2 additions = float2(box.x < 0 ? 256.0 : box.x >= 256.0 ? -256.0 : 0,
+                                        box.y < 0 ? 256.0 : box.y >= 256.0 ? -256.0 : 0);
+            box += additions;
+            
+            float2 p = random2(box);
+            p = 0.5 + 0.5*sin(Time + 6.2831*p);
+            float2 diff = p - (id + additions - box)/32.0;
+            dist = min(dist, length(diff)); 
+        }
+    }
+    dist += 1.-step(.02, dist);
+
+    Result[id.xy] = float4(dist, dist, dist, 1);
+}
