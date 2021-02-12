@@ -677,6 +677,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   computeShader: {fileID: 7200000, guid: 062d50fee6069db44a9d5e05ac13541a, type: 3}
+  generateCenters: 0
+  showPreview: 1
+  previewSlices: {x: 128, y: 128, z: 128}
 --- !u!4 &840850873
 Transform:
   m_ObjectHideFlags: 0
@@ -685,7 +688,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 840850871}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.5772405, y: 14.1586685, z: 26.929062}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -768,8 +771,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
-  m_LocalRotation: {x: -0.19402342, y: 0.36039734, z: -0.077047326, w: -0.90913826}
-  m_LocalPosition: {x: 7.616985, y: 18.2, z: 21.268318}
+  m_LocalRotation: {x: 0.14352594, y: -0.8557004, z: 0.37079003, w: 0.33119765}
+  m_LocalPosition: {x: 9.207517, y: 14.592827, z: 10.112926}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}

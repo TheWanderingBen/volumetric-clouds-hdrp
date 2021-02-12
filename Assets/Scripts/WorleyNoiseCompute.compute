@@ -3,36 +3,67 @@
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
-RWTexture2D<float4> Result;
+RWTexture3D<float4> Result;
 float Time;
+bool GenerateCenters;
 
-float random2( float2 p ) {
-    return frac(sin(float2(dot(p,float2(127.1,311.7)),dot(p,float2(269.5,183.3))))*43758.5453);
+float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
+float4 mod289(float4 x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
+float4 perm(float4 x){return mod289(((x * 34.0) + 1.0) * x);}
+
+float random3(float3 p) {
+    float3 a = floor(p);
+    float3 d = p - a;
+    d = d * d * (3.0 - 2.0 * d);
+
+    float4 b = a.xxyy + float4(0.0, 1.0, 0.0, 1.0);
+    float4 k1 = perm(b.xyxy);
+    float4 k2 = perm(k1.xyxy + b.zzww);
+
+    float4 c = k2 + a.zzzz;
+    float4 k3 = perm(c);
+    float4 k4 = perm(c + 1.0);
+
+    float4 o1 = frac(k3 * (1.0 / 41.0));
+    float4 o2 = frac(k4 * (1.0 / 41.0));
+
+    float4 o3 = o2 * d.z + o1 * (1.0 - d.z);
+    float2 o4 = o3.yw * d.x + o3.xz * (1.0 - d.x);
+
+    return o4.y * d.y + o4.x * (1.0 - d.y);
 }
 
-[numthreads(8,8,1)]
+[numthreads(8,8,8)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     float dist = 1;
-    for (int y = -1; y <= 1; ++y)
+    for (int z = -1; z <= 1; ++z)
     {
-        for (int x = -1; x <=1; ++x)
+        for (int y = -1; y <= 1; ++y)
         {
-            //split into boxes of 32x32 using int rounding
-            float2 box = float2((int)(id.x/32) * 32 + 32 * x, (int)(id.y/32) * 32 + 32 * y);
+            for (int x = -1; x <=1; ++x)
+            {
+                //split into boxes of 32x32 using int rounding
+                float3 box = float3((int)(id.x/32) * 32 + 32 * x,
+                                    (int)(id.y/32) * 32 + 32 * y,
+                                    (int)(id.z/32) * 32 + 32 * z);
 
-            //if we're below zero or beyond the edge of the texture, wrap it
-            float2 additions = float2(box.x < 0 ? 256.0 : box.x >= 256.0 ? -256.0 : 0,
-                                        box.y < 0 ? 256.0 : box.y >= 256.0 ? -256.0 : 0);
-            box += additions;
+                //if we're below zero or beyond the edge of the texture, wrap it
+                float3 additions = float3(box.x < 0 ? 256.0 : box.x >= 256.0 ? -256.0 : 0,
+                                            box.y < 0 ? 256.0 : box.y >= 256.0 ? -256.0 : 0,
+                                            box.z < 0 ? 256.0 : box.z >= 256.0 ? -256.0 : 0);
+                box += additions;
             
-            float2 p = random2(box);
-            p = 0.5 + 0.5*sin(Time + 6.2831*p);
-            float2 diff = p - (id + additions - box)/32.0;
-            dist = min(dist, length(diff)); 
-        }
+                float3 p = random3(box);
+                p = 0.5 + 0.5*sin(Time + 6.2831*p);
+                float3 diff = p - (id + additions - box)/32.0;
+                dist = min(dist, length(diff)); 
+            }
+        }        
     }
-    dist += 1.-step(.02, dist);
+    
+    if (GenerateCenters)
+        dist += 1.-step(.02, dist);
 
-    Result[id.xy] = float4(dist, dist, dist, 1);
+    Result[id.xyz] = float4(dist, dist, dist, 1);
 }

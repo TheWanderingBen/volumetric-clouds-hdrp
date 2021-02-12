@@ -1,63 +1,53 @@
 using System;
-using System.IO;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public class NoiseGenerator : MonoBehaviour
 {
     [SerializeField] ComputeShader computeShader;
-
-    public Texture2D CurrentTexture { get { return currentTexture; } }
-    Texture2D currentTexture;
+    [SerializeField] bool generateCenters;
+    [SerializeField] bool showPreview;
+    [SerializeField] Vector3 previewSlices;
+    
+    public Texture3D CurrentTexture3D { get { return currentTexture3D; } }
+    Texture3D currentTexture3D;
+    
+    public bool ShowPreview { get { return showPreview; } }
+    public Vector3 PreviewSlices { get { return previewSlices; } }
 
     public void GenerateNoise()
     {
         int textureSize = 256;
         
         int kernelHandle = computeShader.FindKernel("CSMain");
-
-        RenderTexture renderTexture = new RenderTexture(textureSize, textureSize, 24);
+        
+        RenderTexture renderTexture = new RenderTexture(textureSize, textureSize, 0, RenderTextureFormat.ARGB32);
+        renderTexture.volumeDepth = textureSize;
+        renderTexture.dimension = TextureDimension.Tex3D;
         renderTexture.enableRandomWrite = true;
         renderTexture.Create();
         
         computeShader.SetTexture(kernelHandle, "Result", renderTexture);
         computeShader.SetFloat("Time", DateTime.Now.Millisecond);
-        computeShader.Dispatch(kernelHandle, textureSize/8, textureSize/8, 1);
-        RenderTexture.active = renderTexture;
+        computeShader.SetBool("GenerateCenters", generateCenters);
+        computeShader.Dispatch(kernelHandle, textureSize/8, textureSize/8, textureSize/8);
+        
+        Texture3D texture3D = new Texture3D(textureSize, textureSize, textureSize, TextureFormat.ARGB32, false);
+        Graphics.CopyTexture(renderTexture, texture3D);
 
-        Texture2D texture2D = new Texture2D(textureSize, textureSize);
-        texture2D.ReadPixels(new Rect(0, 0, textureSize, textureSize), 0, 0);
-
-        RenderTexture.active = null;
-
-        currentTexture = texture2D;
+        currentTexture3D = texture3D;
     }
 
+#if UNITY_EDITOR
     public void SaveNoise()
     {
-        if (currentTexture != null)
-        {
-            string saveDirectory = $"{Application.persistentDataPath}/CloudNoise";
-
-            //write to directory
-            byte[] textureBytes = currentTexture.EncodeToPNG();
-            string filepath = $"{saveDirectory}/CloudNoise_{DateTime.Now:yyyy'-'MM'-'dd'_'HH'_'mm'_'ss}.png";
-
-            try
-            {
-                if (!Directory.Exists(saveDirectory))
-                    Directory.CreateDirectory(saveDirectory);
-
-                File.WriteAllBytes(filepath, textureBytes);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-        }
+        if (currentTexture3D != null)
+            UnityEditor.AssetDatabase.CreateAsset(currentTexture3D, "Assets/Worley3DTexture.asset");
     }
+#endif
 
     public void ClearNoise()
     {
-        currentTexture = null;
+        currentTexture3D = null;
     }
 }
