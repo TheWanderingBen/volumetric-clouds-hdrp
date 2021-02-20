@@ -38,7 +38,8 @@ Shader "Hidden/FullScreen/CloudShader"
     float3 _BoundsMax;
     
     // Returns (dstToBox, dstInsideBox). If ray misses box, dstInsideBox will be zero)
-    float2 rayBoxDst(float3 boundsMin, float3 boundsMax, float3 rayOrigin, float3 rayDir) {
+    float2 rayBoxDst(float3 boundsMin, float3 boundsMax, float3 rayOrigin, float3 rayDir)
+    {
         // From http://jcgt.org/published/0007/03/04/
         // via https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
         float3 t0 = (boundsMin - rayOrigin) / rayDir;
@@ -65,11 +66,8 @@ Shader "Hidden/FullScreen/CloudShader"
     half4 StandardTexture(Varyings varyings) : SV_Target
     {       
         float depth = LoadCameraDepth(varyings.positionCS.xy);
-        PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
-        
-        float4 color = float4(CustomPassSampleCameraColor(posInput.positionNDC.xy, 0), 1);
-                
-        return float4(color.rgb, 1);
+        PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);                
+        return float4(CustomPassSampleCameraColor(posInput.positionNDC.xy, 0), 1);
     }
 
     half4 DrawCloud(Varyings varyings) : SV_Target
@@ -78,18 +76,18 @@ Shader "Hidden/FullScreen/CloudShader"
         PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
         float2 uv = posInput.positionNDC.xy * _RTHandleScale.xy;
 
-        float3 rayOrigin = _WorldSpaceCameraPos + posInput.positionWS;
-        float3 rayDir = normalize(GetViewForwardDir());
+        float3 rayOrigin = _WorldSpaceCameraPos;
+        float3 rayDir = normalize(posInput.positionWS);
 
         float2 rayBoxInfo = rayBoxDst(_BoundsMin, _BoundsMax, rayOrigin, rayDir);
         float dstToBox = rayBoxInfo.x;
         float dstInsideBox = rayBoxInfo.y;
 
         float4 color;
-        if (dstInsideBox > 0 && dstToBox < posInput.deviceDepth)
+        if (dstInsideBox > 0 && dstToBox < posInput.linearDepth)
             color = float4(0,0,1,1);
         else
-            color = float4(SAMPLE_TEXTURE2D_X_LOD(_CameraBuffer, s_linear_clamp_sampler, uv, 0).r, 0, 0, 1);
+            color = float4(SAMPLE_TEXTURE2D_X_LOD(_CameraBuffer, s_linear_clamp_sampler, uv, 0).rgb, 1);
                 
         return color;
     }

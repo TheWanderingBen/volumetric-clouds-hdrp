@@ -33,8 +33,8 @@ class CloudCustomPass : CustomPass
     {
         HDUtils.DrawFullScreen(ctx.cmd, cloudMaterial, cameraBuffer, ctx.propertyBlock, shaderPassId: 0);
         
-        ctx.propertyBlock.SetVector("_BoundsMin", container.position - container.localScale/2);
-        ctx.propertyBlock.SetVector("_BoundsMax", container.position + container.localScale/2);
+        ctx.propertyBlock.SetVector("_BoundsMin", container.position - container.localScale/2f);
+        ctx.propertyBlock.SetVector("_BoundsMax", container.position + container.localScale/2f);
         ctx.propertyBlock.SetTexture("_CameraBuffer", cameraBuffer);
         HDUtils.DrawFullScreen(ctx.cmd, cloudMaterial, ctx.cameraColorBuffer, ctx.propertyBlock, shaderPassId: 1);
     }
