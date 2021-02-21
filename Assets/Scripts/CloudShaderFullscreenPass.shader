@@ -36,12 +36,14 @@ Shader "Hidden/FullScreen/CloudShader"
     
     TEXTURE2D_X(_CameraBuffer);
     TEXTURE3D(_CloudNoise);
+    float3 _LightPos;
     float3 _BoundsMin;
     float3 _BoundsMax;
     float3 _CloudOffset;
     float _CloudScale;
     float _DensityThreshold;
     float _DensityMultiplier;
+    float _DarknessThreshold;
     int _NumSteps;
     
     // Returns (dstToBox, dstInsideBox). If ray misses box, dstInsideBox will be zero)
@@ -78,6 +80,25 @@ Shader "Hidden/FullScreen/CloudShader"
         return density;
     }
 
+    // Calculate proportion of light that reaches the given point from the lightsource
+    float lightmarch(float3 position)
+    {
+        float3 dirToLight = _LightPos.xyz;
+        float dstInsideBox = rayBoxDst(_BoundsMin, _BoundsMax, position, 1/dirToLight).y;
+        
+        float stepSize = dstInsideBox/_NumSteps;
+        float totalDensity = 0;
+
+        [loop] for (int step = 0; step < _NumSteps; step ++)
+        {
+            position += dirToLight * stepSize;
+            totalDensity += max(0, sampleDensity(position) * stepSize);
+        } 
+
+        float transmittance = exp(-totalDensity);// * lightAbsorptionTowardSun);
+        return _DarknessThreshold + transmittance * (1-_DarknessThreshold);
+    }
+
     half4 StandardTexture(Varyings varyings) : SV_Target
     {       
         float depth = LoadCameraDepth(varyings.positionCS.xy);
@@ -91,10 +112,10 @@ Shader "Hidden/FullScreen/CloudShader"
         PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
         float2 uv = posInput.positionNDC.xy * _RTHandleScale.xy;
 
-        float3 rayOrigin = _WorldSpaceCameraPos;
+        float3 rayPos = _WorldSpaceCameraPos;
         float3 rayDir = normalize(posInput.positionWS);
 
-        float2 rayBoxInfo = rayBoxDst(_BoundsMin, _BoundsMax, rayOrigin, rayDir);
+        float2 rayBoxInfo = rayBoxDst(_BoundsMin, _BoundsMax, rayPos, rayDir);
         float dstToBox = rayBoxInfo.x;
         float dstInsideBox = rayBoxInfo.y;
 
@@ -102,16 +123,33 @@ Shader "Hidden/FullScreen/CloudShader"
         float stepSize = dstInsideBox/ _NumSteps;
         float dstLimit = min(posInput.linearDepth - dstToBox, dstInsideBox);
         
-        float totalDensity = 0;
+        // point of intersection with the cloud container
+        float3 entryPoint = rayPos + rayDir * dstToBox;
+        
+        float transmittance = 1;
+        float3 lightEnergy = 0;
+        
         [loop] while (dstTraveled < dstLimit)
         {
-            float3 rayPos = rayOrigin + rayDir * (dstToBox + dstTraveled);
-            totalDensity += sampleDensity(rayPos) * stepSize;
+            rayPos = entryPoint + rayDir * dstTraveled;
+            float density = sampleDensity(rayPos);
+            
+            if (density > 0)
+            {
+                float lightTransmittance = lightmarch(rayPos);                
+                lightEnergy += density * stepSize * transmittance * lightTransmittance;
+                
+                transmittance *= exp(-density * stepSize);// * lightAbsorptionThroughCloud);
+            
+                // Exit early if T is close to zero as further samples won't affect the result much
+                if (transmittance < 0.01)
+                    break;
+            }
+            
             dstTraveled += stepSize;
         }
         
-        float transmittance = exp(-totalDensity);
-        float4 color = float4(SAMPLE_TEXTURE2D_X_LOD(_CameraBuffer, s_linear_clamp_sampler, uv, 0).rgb * transmittance, 1);
+        float4 color = float4(SAMPLE_TEXTURE2D_X_LOD(_CameraBuffer, s_linear_clamp_sampler, uv, 0).rgb * transmittance + lightEnergy, 1);
                 
         return color;
     }

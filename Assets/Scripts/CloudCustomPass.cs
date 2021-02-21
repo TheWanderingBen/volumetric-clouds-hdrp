@@ -10,11 +10,13 @@ class CloudCustomPass : CustomPass
 {
     public LayerMask cloudLayer = 0;
     public Transform container;
+    public Transform directionalLight;
     public Texture3D cloudNoise;
     public Vector3 cloudOffset;
     public float cloudScale = 1f;
-    [Range(0, 1)] public float densityThreshold = 1f;
+    [Range(0, 1)] public float densityThreshold = 0.1f;
     public float densityMultiplier = 1f;
+    [Range(0, 1)] public float darknessThreshold = 0.1f;
     public int numSteps = 5;
     
     Material cloudMaterial;
@@ -41,6 +43,7 @@ class CloudCustomPass : CustomPass
         
         ctx.propertyBlock.SetVector("_BoundsMin", container.position - container.localScale/2f);
         ctx.propertyBlock.SetVector("_BoundsMax", container.position + container.localScale/2f);
+        ctx.propertyBlock.SetVector("_LightPos", directionalLight.position);
         ctx.propertyBlock.SetTexture("_CameraBuffer", cameraBuffer);
         ctx.propertyBlock.SetVector("_CloudOffset", cloudOffset);
         ctx.propertyBlock.SetFloat("_CloudScale", cloudScale);
