@@ -10,6 +10,12 @@ class CloudCustomPass : CustomPass
 {
     public LayerMask cloudLayer = 0;
     public Transform container;
+    public Texture3D cloudNoise;
+    public Vector3 cloudOffset;
+    public float cloudScale = 1f;
+    [Range(0, 1)] public float densityThreshold = 1f;
+    public float densityMultiplier = 1f;
+    public int numSteps = 5;
     
     Material cloudMaterial;
     RTHandle cameraBuffer;
@@ -36,6 +42,15 @@ class CloudCustomPass : CustomPass
         ctx.propertyBlock.SetVector("_BoundsMin", container.position - container.localScale/2f);
         ctx.propertyBlock.SetVector("_BoundsMax", container.position + container.localScale/2f);
         ctx.propertyBlock.SetTexture("_CameraBuffer", cameraBuffer);
+        ctx.propertyBlock.SetVector("_CloudOffset", cloudOffset);
+        ctx.propertyBlock.SetFloat("_CloudScale", cloudScale);
+        ctx.propertyBlock.SetFloat("_DensityThreshold", densityThreshold);
+        ctx.propertyBlock.SetFloat("_DensityMultiplier", densityMultiplier);
+        ctx.propertyBlock.SetInt("_NumSteps", numSteps);
+        
+        if (cloudNoise != null)
+            ctx.propertyBlock.SetTexture("_CloudNoise", cloudNoise);
+        
         HDUtils.DrawFullScreen(ctx.cmd, cloudMaterial, ctx.cameraColorBuffer, ctx.propertyBlock, shaderPassId: 1);
     }
     

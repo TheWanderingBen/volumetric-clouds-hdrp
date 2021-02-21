@@ -9,6 +9,7 @@ Shader "Hidden/FullScreen/CloudShader"
     #pragma enable_d3d11_debug_symbols
 
     #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/RenderPass/CustomPass/CustomPassCommon.hlsl"
+    #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Material/NormalBuffer.hlsl"
 
     // The PositionInputs struct allow you to retrieve a lot of useful information for your fullScreenShader:
     // struct PositionInputs
@@ -34,8 +35,14 @@ Shader "Hidden/FullScreen/CloudShader"
     #pragma enable_d3d11_debug_symbols
     
     TEXTURE2D_X(_CameraBuffer);
+    TEXTURE3D(_CloudNoise);
     float3 _BoundsMin;
     float3 _BoundsMax;
+    float3 _CloudOffset;
+    float _CloudScale;
+    float _DensityThreshold;
+    float _DensityMultiplier;
+    int _NumSteps;
     
     // Returns (dstToBox, dstInsideBox). If ray misses box, dstInsideBox will be zero)
     float2 rayBoxDst(float3 boundsMin, float3 boundsMax, float3 rayOrigin, float3 rayDir)
@@ -63,6 +70,14 @@ Shader "Hidden/FullScreen/CloudShader"
         return float2(dstToBox, dstInsideBox);
     }
 
+    float sampleDensity(float3 position)
+    {
+        float3 uvw = position * _CloudScale * 0.001 + _CloudOffset * 0.01;
+        float4 shape = SAMPLE_TEXTURE3D(_CloudNoise, s_linear_repeat_sampler, uvw);
+        float density = max(0, shape.r - _DensityThreshold) * _DensityMultiplier;
+        return density;
+    }
+
     half4 StandardTexture(Varyings varyings) : SV_Target
     {       
         float depth = LoadCameraDepth(varyings.positionCS.xy);
@@ -83,11 +98,20 @@ Shader "Hidden/FullScreen/CloudShader"
         float dstToBox = rayBoxInfo.x;
         float dstInsideBox = rayBoxInfo.y;
 
-        float4 color;
-        if (dstInsideBox > 0 && dstToBox < posInput.linearDepth)
-            color = float4(0,0,1,1);
-        else
-            color = float4(SAMPLE_TEXTURE2D_X_LOD(_CameraBuffer, s_linear_clamp_sampler, uv, 0).rgb, 1);
+        float dstTraveled = 0;
+        float stepSize = dstInsideBox/ _NumSteps;
+        float dstLimit = min(posInput.linearDepth - dstToBox, dstInsideBox);
+        
+        float totalDensity = 0;
+        [loop] while (dstTraveled < dstLimit)
+        {
+            float3 rayPos = rayOrigin + rayDir * (dstToBox + dstTraveled);
+            totalDensity += sampleDensity(rayPos) * stepSize;
+            dstTraveled += stepSize;
+        }
+        
+        float transmittance = exp(-totalDensity);
+        float4 color = float4(SAMPLE_TEXTURE2D_X_LOD(_CameraBuffer, s_linear_clamp_sampler, uv, 0).rgb * transmittance, 1);
                 
         return color;
     }
