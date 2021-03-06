@@ -9,7 +9,6 @@ Shader "Hidden/FullScreen/CloudShader"
     #pragma enable_d3d11_debug_symbols
 
     #include "Packages/com.unity.render-pipelines.high-definition/Runtime/RenderPipeline/RenderPass/CustomPass/CustomPassCommon.hlsl"
-    #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Material/NormalBuffer.hlsl"
 
     // The PositionInputs struct allow you to retrieve a lot of useful information for your fullScreenShader:
     // struct PositionInputs
@@ -44,7 +43,7 @@ Shader "Hidden/FullScreen/CloudShader"
     float _DensityThreshold;
     float _DensityMultiplier;
     float _DarknessThreshold;
-    int _NumSteps;
+    float _StepSize;
     
     // Returns (dstToBox, dstInsideBox). If ray misses box, dstInsideBox will be zero)
     float2 rayBoxDst(float3 boundsMin, float3 boundsMax, float3 rayOrigin, float3 rayDir)
@@ -86,10 +85,10 @@ Shader "Hidden/FullScreen/CloudShader"
         float3 dirToLight = _LightPos.xyz;
         float dstInsideBox = rayBoxDst(_BoundsMin, _BoundsMax, position, 1/dirToLight).y;
         
-        float stepSize = dstInsideBox/_NumSteps;
+        float stepSize = dstInsideBox/5;
         float totalDensity = 0;
 
-        [loop] for (int step = 0; step < _NumSteps; step ++)
+        [loop] for (int step = 0; step < 5; ++step)
         {
             position += dirToLight * stepSize;
             totalDensity += max(0, sampleDensity(position) * stepSize);
@@ -120,7 +119,7 @@ Shader "Hidden/FullScreen/CloudShader"
         float dstInsideBox = rayBoxInfo.y;
 
         float dstTraveled = 0;
-        float stepSize = dstInsideBox/ _NumSteps;
+        float stepSize = _StepSize;
         float dstLimit = min(posInput.linearDepth - dstToBox, dstInsideBox);
         
         // point of intersection with the cloud container

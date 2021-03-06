@@ -177,11 +177,11 @@ MonoBehaviour:
         directionalLight: {fileID: 705507995}
         cloudNoise: {fileID: 11700000, guid: e1036d8d0aa044740818b0cd4c09f9d7, type: 2}
         cloudOffset: {x: 0, y: 0, z: 0}
-        cloudScale: 73.9
-        densityThreshold: 0.478
-        densityMultiplier: 1
-        darknessThreshold: 0.295
-        numSteps: 5
+        cloudScale: 27.05
+        densityThreshold: 0.465
+        densityMultiplier: 2.73
+        darknessThreshold: 0.327
+        stepSize: 0.156
 --- !u!4 &105137647
 Transform:
   m_ObjectHideFlags: 0
@@ -191,7 +191,7 @@ Transform:
   m_GameObject: {fileID: 105137643}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 1.36, y: 14.96, z: 27.469}
-  m_LocalScale: {x: 8.41, y: 3.3282444, z: 8.42}
+  m_LocalScale: {x: 30.358418, y: 15.383197, z: 27.927458}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 2
