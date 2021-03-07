@@ -18,6 +18,7 @@ class CloudCustomPass : CustomPass
     public float densityMultiplier = 1f;
     [Range(0, 1)] public float darknessThreshold = 0.1f;
     [Range(0.01f, 1f)] public float stepSize = 0.1f;
+    public int lightAbsorptionTowardSun = 20;
     
     Material cloudMaterial;
     RTHandle cameraBuffer;
@@ -51,6 +52,7 @@ class CloudCustomPass : CustomPass
         ctx.propertyBlock.SetFloat("_DensityMultiplier", densityMultiplier);
         ctx.propertyBlock.SetFloat("_DarknessThreshold", darknessThreshold);
         ctx.propertyBlock.SetFloat("_StepSize", stepSize);
+        ctx.propertyBlock.SetInt("_LightAbsorptionTowardSun", lightAbsorptionTowardSun);
         
         if (cloudNoise != null)
             ctx.propertyBlock.SetTexture("_CloudNoise", cloudNoise);

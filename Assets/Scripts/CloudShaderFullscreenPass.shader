@@ -44,6 +44,7 @@ Shader "Hidden/FullScreen/CloudShader"
     float _DensityMultiplier;
     float _DarknessThreshold;
     float _StepSize;
+    int _LightAbsorptionTowardSun;
     
     // Returns (dstToBox, dstInsideBox). If ray misses box, dstInsideBox will be zero)
     float2 rayBoxDst(float3 boundsMin, float3 boundsMax, float3 rayOrigin, float3 rayDir)
@@ -94,7 +95,7 @@ Shader "Hidden/FullScreen/CloudShader"
             totalDensity += max(0, sampleDensity(position) * stepSize);
         } 
 
-        float transmittance = exp(-totalDensity);// * lightAbsorptionTowardSun);
+        float transmittance = exp(-totalDensity * _LightAbsorptionTowardSun);
         return _DarknessThreshold + transmittance * (1-_DarknessThreshold);
     }
 
@@ -138,7 +139,7 @@ Shader "Hidden/FullScreen/CloudShader"
                 float lightTransmittance = lightmarch(rayPos);                
                 lightEnergy += density * stepSize * transmittance * lightTransmittance;
                 
-                transmittance *= exp(-density * stepSize);// * lightAbsorptionThroughCloud);
+                transmittance *= exp(-density * stepSize);
             
                 // Exit early if T is close to zero as further samples won't affect the result much
                 if (transmittance < 0.01)
