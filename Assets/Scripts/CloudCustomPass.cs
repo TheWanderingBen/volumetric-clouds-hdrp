@@ -49,6 +49,7 @@ class CloudCustomPass : CustomPass
         ctx.propertyBlock.SetFloat("_CloudScale", cloudScale);
         ctx.propertyBlock.SetFloat("_DensityThreshold", densityThreshold);
         ctx.propertyBlock.SetFloat("_DensityMultiplier", densityMultiplier);
+        ctx.propertyBlock.SetFloat("_DarknessThreshold", darknessThreshold);
         ctx.propertyBlock.SetFloat("_StepSize", stepSize);
         
         if (cloudNoise != null)
