@@ -10,6 +10,9 @@ int Size;
 int Divisions0;
 int Divisions1;
 int Divisions2;
+float DivisionsWeight0;
+float DivisionsWeight1;
+float DivisionsWeight2;
 
 float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
 float4 mod289(float4 x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
@@ -38,7 +41,7 @@ float random3(float3 p)
     return o4.y * d.y + o4.x * (1.0 - d.y);
 }
 
-void AddToResult(uint3 id, int boxSize)
+void AddToResult(uint3 id, int boxSize, float weight)
 {
     float dist = 1;
     for (int z = -1; z <= 1; ++z)
@@ -71,14 +74,14 @@ void AddToResult(uint3 id, int boxSize)
 
     dist = 1 - dist;
 
-    Result[id.xyz] += float4(dist/3.0, dist/3.0, dist/3.0, 0);
+    Result[id.xyz] += float4(dist * weight, dist * weight, dist * weight, 0);
 }
 
 [numthreads(8,8,8)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
-    AddToResult(id, Size/Divisions0);
-    AddToResult(id, Size/Divisions1);
-    AddToResult(id, Size/Divisions2);
+    AddToResult(id, Size/Divisions0, DivisionsWeight0);
+    AddToResult(id, Size/Divisions1, DivisionsWeight1);
+    AddToResult(id, Size/Divisions2, DivisionsWeight2);
     Result[id.xyz] += float4(0,0,0,1);
 }

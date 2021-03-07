@@ -5,15 +5,17 @@ using UnityEngine.Rendering;
 public class NoiseGenerator : MonoBehaviour
 {
     [SerializeField] ComputeShader computeShader;
-    [SerializeField] int divisions0 = 8;
-    [SerializeField] int divisions1 = 8;
-    [SerializeField] int divisions2 = 8;
+    [SerializeField] Vector3 divisions = new Vector3(8, 8, 8);
+    [SerializeField] Vector3 divisionsWeight = new Vector3(1f/3f, 1f/3f, 1f/3f);
     [SerializeField] bool generateCenters;
     [SerializeField] bool showPreview;
     [SerializeField] Vector3 previewSlices;
     
     public Texture3D CurrentTexture3D { get { return currentTexture3D; } }
     Texture3D currentTexture3D;
+    
+    public RenderTexture CurrentRenderTexture { get { return renderTexture; } }
+    RenderTexture renderTexture;
     
     public bool ShowPreview { get { return showPreview; } }
     public Vector3 PreviewSlices { get { return previewSlices; } }
@@ -22,9 +24,10 @@ public class NoiseGenerator : MonoBehaviour
     
     public void GenerateNoise()
     {
+        float totalWeight = divisionsWeight.x + divisionsWeight.y + divisionsWeight.z;
         int kernelHandle = computeShader.FindKernel("CSMain");
         
-        RenderTexture renderTexture = new RenderTexture(textureSize, textureSize, 0, RenderTextureFormat.ARGB32);
+        renderTexture = new RenderTexture(textureSize, textureSize, 0, RenderTextureFormat.ARGB32);
         renderTexture.volumeDepth = textureSize;
         renderTexture.dimension = TextureDimension.Tex3D;
         renderTexture.enableRandomWrite = true;
@@ -33,9 +36,12 @@ public class NoiseGenerator : MonoBehaviour
         computeShader.SetTexture(kernelHandle, "Result", renderTexture);
         computeShader.SetFloat("Time", DateTime.Now.Millisecond);
         computeShader.SetBool("GenerateCenters", generateCenters);
-        computeShader.SetInt("Divisions0", divisions0);
-        computeShader.SetInt("Divisions1", divisions1);
-        computeShader.SetInt("Divisions2", divisions2);
+        computeShader.SetInt("Divisions0", (int)divisions.x);
+        computeShader.SetInt("Divisions1", (int)divisions.y);
+        computeShader.SetInt("Divisions2", (int)divisions.z);
+        computeShader.SetFloat("DivisionsWeight0", divisionsWeight.x / totalWeight);
+        computeShader.SetFloat("DivisionsWeight1", divisionsWeight.y / totalWeight);
+        computeShader.SetFloat("DivisionsWeight2", divisionsWeight.z / totalWeight);
         computeShader.SetInt("Size", textureSize);
         computeShader.Dispatch(kernelHandle, textureSize/8, textureSize/8, textureSize/8);
         

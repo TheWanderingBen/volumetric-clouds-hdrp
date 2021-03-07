@@ -11,7 +11,7 @@ class CloudCustomPass : CustomPass
     public LayerMask cloudLayer = 0;
     public Transform container;
     public Transform directionalLight;
-    public Texture3D cloudNoise;
+    public NoiseGenerator noiseGenerator;
     public Vector3 cloudOffset;
     public float cloudScale = 1f;
     [Range(0, 1)] public float densityThreshold = 0.1f;
@@ -54,8 +54,8 @@ class CloudCustomPass : CustomPass
         ctx.propertyBlock.SetFloat("_StepSize", stepSize);
         ctx.propertyBlock.SetInt("_LightAbsorptionTowardSun", lightAbsorptionTowardSun);
         
-        if (cloudNoise != null)
-            ctx.propertyBlock.SetTexture("_CloudNoise", cloudNoise);
+        if (noiseGenerator.CurrentRenderTexture != null)
+            ctx.propertyBlock.SetTexture("_CloudNoise", noiseGenerator.CurrentRenderTexture);
         
         HDUtils.DrawFullScreen(ctx.cmd, cloudMaterial, ctx.cameraColorBuffer, ctx.propertyBlock, shaderPassId: 1);
     }
