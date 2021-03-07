@@ -82,8 +82,8 @@ Shader "Hidden/FullScreen/CloudShader"
     // Calculate proportion of light that reaches the given point from the lightsource
     float lightmarch(float3 position)
     {
-        float3 dirToLight = _LightPos.xyz;
-        float dstInsideBox = rayBoxDst(_BoundsMin, _BoundsMax, position, 1/dirToLight).y;
+        float3 dirToLight = _LightPos.xyz - position;
+        float dstInsideBox = rayBoxDst(_BoundsMin, _BoundsMax, position, dirToLight).y;
         
         float stepSize = dstInsideBox/5;
         float totalDensity = 0;
