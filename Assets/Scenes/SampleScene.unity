@@ -177,11 +177,11 @@ MonoBehaviour:
         directionalLight: {fileID: 705507995}
         cloudNoise: {fileID: 11700000, guid: e1036d8d0aa044740818b0cd4c09f9d7, type: 2}
         cloudOffset: {x: 0, y: 0, z: 0}
-        cloudScale: 27.05
-        densityThreshold: 0.465
+        cloudScale: 8
+        densityThreshold: 0.377
         densityMultiplier: 2.73
         darknessThreshold: 0.327
-        stepSize: 0.156
+        stepSize: 0.1
 --- !u!4 &105137647
 Transform:
   m_ObjectHideFlags: 0
@@ -431,7 +431,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 705507993}
   m_LocalRotation: {x: 0.40821788, y: -0.23456968, z: 0.10938163, w: 0.8754261}
-  m_LocalPosition: {x: 0, y: 31.9, z: 23.3}
+  m_LocalPosition: {x: 0, y: 48.4, z: 21.4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -670,9 +670,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   computeShader: {fileID: 7200000, guid: 062d50fee6069db44a9d5e05ac13541a, type: 3}
+  divisions0: 8
+  divisions1: 16
+  divisions2: 32
   generateCenters: 0
   showPreview: 1
-  previewSlices: {x: 128, y: 128, z: 128}
+  previewSlices: {x: 126.55, y: 128, z: 128}
 --- !u!4 &840850873
 Transform:
   m_ObjectHideFlags: 0

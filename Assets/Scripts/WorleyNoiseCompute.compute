@@ -6,12 +6,17 @@
 RWTexture3D<float4> Result;
 float Time;
 bool GenerateCenters;
+int Size;
+int Divisions0;
+int Divisions1;
+int Divisions2;
 
 float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
 float4 mod289(float4 x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
 float4 perm(float4 x){return mod289(((x * 34.0) + 1.0) * x);}
 
-float random3(float3 p) {
+float random3(float3 p)
+{
     float3 a = floor(p);
     float3 d = p - a;
     d = d * d * (3.0 - 2.0 * d);
@@ -33,8 +38,7 @@ float random3(float3 p) {
     return o4.y * d.y + o4.x * (1.0 - d.y);
 }
 
-[numthreads(8,8,8)]
-void CSMain (uint3 id : SV_DispatchThreadID)
+void AddToResult(uint3 id, int boxSize)
 {
     float dist = 1;
     for (int z = -1; z <= 1; ++z)
@@ -44,19 +48,19 @@ void CSMain (uint3 id : SV_DispatchThreadID)
             for (int x = -1; x <=1; ++x)
             {
                 //split into boxes of 32x32 using int rounding
-                float3 box = float3((int)(id.x/32) * 32 + 32 * x,
-                                    (int)(id.y/32) * 32 + 32 * y,
-                                    (int)(id.z/32) * 32 + 32 * z);
+                float3 box = float3((int)(id.x/boxSize) * boxSize + boxSize * x,
+                                    (int)(id.y/boxSize) * boxSize + boxSize * y,
+                                    (int)(id.z/boxSize) * boxSize + boxSize * z);
 
                 //if we're below zero or beyond the edge of the texture, wrap it
-                float3 additions = float3(box.x < 0 ? 256.0 : box.x >= 256.0 ? -256.0 : 0,
-                                            box.y < 0 ? 256.0 : box.y >= 256.0 ? -256.0 : 0,
-                                            box.z < 0 ? 256.0 : box.z >= 256.0 ? -256.0 : 0);
+                float3 additions = float3(box.x < 0 ? Size : box.x >= Size ? -Size : 0,
+                                            box.y < 0 ? Size : box.y >= Size ? -Size : 0,
+                                            box.z < 0 ? Size : box.z >= Size ? -Size : 0);
                 box += additions;
             
                 float3 p = random3(box);
                 p = 0.5 + 0.5*sin(Time + 6.2831*p);
-                float3 diff = p - (id + additions - box)/32.0;
+                float3 diff = p - (id + additions - box)/(float)boxSize;
                 dist = min(dist, length(diff)); 
             }
         }        
@@ -67,5 +71,14 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
     dist = 1 - dist;
 
-    Result[id.xyz] = float4(dist, dist, dist, 1);
+    Result[id.xyz] += float4(dist/3.0, dist/3.0, dist/3.0, 0);
+}
+
+[numthreads(8,8,8)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    AddToResult(id, Size/Divisions0);
+    AddToResult(id, Size/Divisions1);
+    AddToResult(id, Size/Divisions2);
+    Result[id.xyz] += float4(0,0,0,1);
 }
