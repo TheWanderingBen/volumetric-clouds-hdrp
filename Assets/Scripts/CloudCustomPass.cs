@@ -49,7 +49,7 @@ class CloudCustomPass : CustomPass
         
         ctx.propertyBlock.SetTexture("_CloudNoise", noiseGenerator.CurrentRenderTexture);
         
-        HDUtils.DrawFullScreen(ctx.cmd, cloudMaterial, ctx.cameraColorBuffer, ctx.propertyBlock, shaderPassId: 1);
+        HDUtils.DrawFullScreen(ctx.cmd, cloudMaterial, ctx.cameraColorBuffer, ctx.propertyBlock, shaderPassId: 0);
     }
     
     // release all resources

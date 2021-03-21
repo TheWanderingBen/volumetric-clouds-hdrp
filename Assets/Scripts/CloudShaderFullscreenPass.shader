@@ -98,13 +98,6 @@ Shader "Hidden/FullScreen/CloudShader"
         return _DarknessThreshold + transmittance * (1-_DarknessThreshold);
     }
 
-    half4 StandardTexture(Varyings varyings) : SV_Target
-    {       
-        float depth = LoadCameraDepth(varyings.positionCS.xy);
-        PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);                
-        return float4(CustomPassSampleCameraColor(posInput.positionNDC.xy, 0), 1);
-    }
-
     half4 DrawCloud(Varyings varyings) : SV_Target
     {       
         float depth = LoadCameraDepth(varyings.positionCS.xy);
@@ -156,24 +149,10 @@ Shader "Hidden/FullScreen/CloudShader"
     ENDHLSL
 
     SubShader
-    {
+    {        
         Pass
         {
-            Name "Custom Pass 0"
-
-            ZWrite Off
-            ZTest Always
-            Blend SrcAlpha OneMinusSrcAlpha
-            Cull Off
-
-            HLSLPROGRAM
-                #pragma fragment StandardTexture
-            ENDHLSL
-        }
-        
-        Pass
-        {
-            Name "Custom Pass 1"
+            Name "Custom Pass"
 
             ZWrite Off
             ZTest Always
