@@ -44,8 +44,10 @@ class CloudCustomPass : CustomPass
         ctx.propertyBlock.SetFloat("_StepSize", stepSize);
         ctx.propertyBlock.SetInt("_LightAbsorptionTowardSun", lightAbsorptionTowardSun);
         
-        if (noiseGenerator.CurrentRenderTexture != null)
-            ctx.propertyBlock.SetTexture("_CloudNoise", noiseGenerator.CurrentRenderTexture);
+        if (noiseGenerator.CurrentRenderTexture == null)
+            noiseGenerator.GenerateNoise();
+        
+        ctx.propertyBlock.SetTexture("_CloudNoise", noiseGenerator.CurrentRenderTexture);
         
         HDUtils.DrawFullScreen(ctx.cmd, cloudMaterial, ctx.cameraColorBuffer, ctx.propertyBlock, shaderPassId: 1);
     }
