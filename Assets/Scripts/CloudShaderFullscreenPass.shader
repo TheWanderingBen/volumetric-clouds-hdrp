@@ -33,7 +33,6 @@ Shader "Hidden/FullScreen/CloudShader"
     // you can check them out in the source code of the core SRP package.
     #pragma enable_d3d11_debug_symbols
     
-    TEXTURE2D_X(_CameraBuffer);
     TEXTURE3D(_CloudNoise);
     float3 _LightPos;
     float3 _BoundsMin;
@@ -149,7 +148,7 @@ Shader "Hidden/FullScreen/CloudShader"
             dstTraveled += stepSize;
         }
         
-        float4 color = float4(SAMPLE_TEXTURE2D_X_LOD(_CameraBuffer, s_linear_clamp_sampler, uv, 0).rgb * transmittance + lightEnergy, 1);
+        float4 color = float4(transmittance + lightEnergy, 1 - transmittance.x);
                 
         return color;
     }
