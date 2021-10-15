@@ -34,6 +34,7 @@ Shader "Hidden/FullScreen/CloudShader"
     #pragma enable_d3d11_debug_symbols
     
     TEXTURE3D(_CloudNoise);
+    TEXTURE2D_X(_Source);
     float3 _LightPos;
     float3 _BoundsMin;
     float3 _BoundsMax;
@@ -44,6 +45,11 @@ Shader "Hidden/FullScreen/CloudShader"
     float _DarknessThreshold;
     float _StepSize;
     int _LightAbsorptionTowardSun;
+
+    //blur values:
+    TEXTURE2D_X(_ColorBufferCopy);
+    half4 _ViewPortSize; // We need the viewport size because we have a non fullscreen render target (blur buffers are downsampled in half res)
+    half _Radius;
     
     // Returns (dstToBox, dstInsideBox). If ray misses box, dstInsideBox will be zero)
     float2 rayBoxDst(float3 boundsMin, float3 boundsMax, float3 rayOrigin, float3 rayDir)
@@ -98,6 +104,22 @@ Shader "Hidden/FullScreen/CloudShader"
         return _DarknessThreshold + transmittance * (1-_DarknessThreshold);
     }
 
+    float3 blurPixels(float3 taps[9])
+    {
+        return 0.27343750 * (taps[4]          )
+             + 0.21875000 * (taps[3] + taps[5])
+             + 0.10937500 * (taps[2] + taps[6])
+             + 0.03125000 * (taps[1] + taps[7])
+             + 0.00390625 * (taps[0] + taps[8]);
+    }
+
+    // We need to clamp the UVs to avoid bleeding from bigger render tragets (when we have multiple cameras)
+    half2 clampUVs(float2 uv)
+    {
+        uv = clamp(uv, 0, _RTHandleScale - _ScreenSize.zw * 2); // clamp UV to 1 pixel to avoid bleeding
+        return uv;
+    }
+
     half4 DrawCloud(Varyings varyings) : SV_Target
     {       
         float depth = LoadCameraDepth(varyings.positionCS.xy);
@@ -141,9 +163,60 @@ Shader "Hidden/FullScreen/CloudShader"
             dstTraveled += stepSize;
         }
         
-        float4 color = float4(transmittance + lightEnergy, 1 - transmittance.x);
+        float4 color = float4((transmittance + lightEnergy).rg, (1 - transmittance.x), 1);
                 
         return color;
+    }
+
+    half4 HorizontalBlur(Varyings varyings) : SV_Target
+    {        
+        half depth = LoadCameraDepth(varyings.positionCS.xy);
+        PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ViewPortSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
+            
+        half2 texcoord = posInput.positionNDC.xy * _RTHandleScale.xy;
+        half texOffsetX = 0;
+        
+        // Horizontal blur from the camera color buffer
+        half2 offset = _ScreenSize.zw * _Radius; // We don't use _ViewPortSize here because we want the offset to be the same between all the blur passes.
+        float3 taps[9];
+        for (int i = -4; i <= 4; i++)
+        {
+            half2 uv = clampUVs(texcoord + half2(i, 0) * (offset + texOffsetX));
+            taps[i + 4] = SAMPLE_TEXTURE2D_X_LOD(_Source, s_linear_clamp_sampler, uv, 0).rgb;
+        }
+
+        return half4(blurPixels(taps), 1);
+    }
+ 
+    half4 VerticalBlur(Varyings varyings) : SV_Target
+    {        
+        half depth = LoadCameraDepth(varyings.positionCS.xy);
+        PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ViewPortSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
+            
+        half2 texcoord = posInput.positionNDC.xy * _RTHandleScale.xy;
+        half texOffsetY = 0;
+        
+        half2 offset = _ScreenSize.zw * _Radius;
+        float3 taps[9];
+        for (int i = -4; i <= 4; i++)
+        {
+            half2 uv = clampUVs(texcoord + half2(0, i) * (offset + texOffsetY));
+            taps[i + 4] = SAMPLE_TEXTURE2D_X_LOD(_Source, s_linear_clamp_sampler, uv, 0).rgb;
+        }
+
+        return half4(blurPixels(taps), 1);
+    }
+    
+    half4 Composite(Varyings varyings) : SV_Target
+    {
+        float depth = LoadCameraDepth(varyings.positionCS.xy);
+        PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ViewPortSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
+        half2 uv = clampUVs(posInput.positionNDC.xy * _RTHandleScale.xy);
+
+        half4 colorBuffer = SAMPLE_TEXTURE2D_X_LOD(_ColorBufferCopy, s_linear_clamp_sampler, uv, 0).rgba;        
+        half4 blurredCloudBuffer = SAMPLE_TEXTURE2D_X_LOD(_Source, s_linear_clamp_sampler, uv, 0).rgba;
+        
+        return half4(lerp(colorBuffer.rgb, blurredCloudBuffer.rrr, min(blurredCloudBuffer.b, 1)), 1);
     }
 
     ENDHLSL
@@ -152,7 +225,7 @@ Shader "Hidden/FullScreen/CloudShader"
     {        
         Pass
         {
-            Name "Custom Pass"
+            Name "Draw Clouds"
 
             ZWrite Off
             ZTest Always
@@ -161,6 +234,51 @@ Shader "Hidden/FullScreen/CloudShader"
 
             HLSLPROGRAM
                 #pragma fragment DrawCloud
+            ENDHLSL
+        }
+        
+        Pass
+        {
+            // Horizontal Blur of clouds
+            Name "Horizontal Blur"
+
+            ZWrite Off
+            ZTest Always
+            Blend Off
+            Cull Off
+
+            HLSLPROGRAM
+                #pragma fragment HorizontalBlur
+            ENDHLSL
+        }
+
+        Pass
+        {
+            // Vertical Blur of clouds
+            Name "Vertical Blur"
+
+            ZWrite Off
+            ZTest Always
+            Blend Off
+            Cull Off
+
+            HLSLPROGRAM
+                #pragma fragment VerticalBlur
+            ENDHLSL
+        }
+
+        Pass
+        {
+            // Vertical Blur from the blur buffer back to camera color
+            Name "Composite Clouds and Color"
+
+            ZWrite Off
+            ZTest Always
+            Blend Off
+            Cull Off
+
+            HLSLPROGRAM
+                #pragma fragment Composite
             ENDHLSL
         }
     }
