@@ -158,8 +158,7 @@ MonoBehaviour:
   priority: 0
   customPasses:
   - id: 0
-  - id: 1
-  injectionPoint: 2
+  injectionPoint: 1
   references:
     version: 1
     00000000:
@@ -187,32 +186,6 @@ MonoBehaviour:
         lightAbsorptionTowardSun: 20
         blurRadius: 4
         blurQuality: 0.1
-    00000001:
-      type: {class: SlightBlur, ns: Tangier.Effects.CustomPassEffects, asm: Assembly-CSharp}
-      data:
-        m_Name: Custom Pass
-        enabled: 0
-        targetColorBuffer: 0
-        targetDepthBuffer: 0
-        clearFlags: 0
-        passFoldout: 0
-        m_Version: 0
-        radius: 4
-        useMask: 1
-        maskLayer:
-          serializedVersion: 2
-          m_Bits: 8
-        invertMask: 0
-        useTexture: 0
-        texture2D: {fileID: 0}
-        textureWeight: 1
-        textureSize: {x: 512, y: 512}
-        colorAdd: {r: 0, g: 0, b: 0, a: 0}
-        colorMultiply: {r: 1, g: 1, b: 1, a: 1}
-        backingColor: {r: 0, g: 0, b: 0, a: 0}
-        minimumLightness: 0
-        maskOnTextureStrength: 1
-        blurQuality: 1
 --- !u!114 &105137645
 MonoBehaviour:
   m_ObjectHideFlags: 0
