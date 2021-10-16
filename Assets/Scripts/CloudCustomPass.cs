@@ -17,7 +17,7 @@ class CloudCustomPass : CustomPass
     [Range(0, 1)] public float densityThreshold = 0.1f;
     public float densityMultiplier = 1f;
     [Range(0, 1)] public float darknessThreshold = 0.1f;
-    [Range(0.01f, 1f)] public float stepSize = 0.1f;
+    [Range(0.01f, 10f)] public float stepSize = 0.1f;
     public int lightAbsorptionTowardSun = 20;
     public float blurRadius = 4;
     [Range(0.1f, 1f)] public float blurQuality = 1f;
@@ -25,8 +25,8 @@ class CloudCustomPass : CustomPass
     RTHandle cameraColorCopy;
     RTHandle downSampleCloudBuffer;
     RTHandle downSampleBlurBuffer;
-    
     Material cloudMaterial;
+    float oldBlurQuality;
 
     // It can be used to configure render targets and their clear state. Also to create temporary render target textures.
     // When empty this render pass will render to the active camera render target.
@@ -39,14 +39,18 @@ class CloudCustomPass : CustomPass
 
     protected override void Execute(CustomPassContext ctx)
     {
-        RTHandle source;
+        RTHandle source = targetColorBuffer == TargetBuffer.Camera ? ctx.cameraColorBuffer : ctx.customColorBuffer.Value;
 
-
-        // Retrieve the target buffer of the blur from the UI:
-        if (targetColorBuffer == TargetBuffer.Camera)
-            GetCameraBuffers(out source, out _);
-        else
-            GetCustomBuffers(out source, out _);
+        if (oldBlurQuality != blurQuality)
+        {
+            if (cameraColorCopy?.rt != null)
+            {
+                cameraColorCopy?.Release();
+                downSampleCloudBuffer?.Release();
+                downSampleBlurBuffer?.Release();
+            }
+            oldBlurQuality = blurQuality;
+        }
         
         if (cameraColorCopy?.rt == null)
         {
@@ -84,6 +88,7 @@ class CloudCustomPass : CustomPass
             ctx.propertyBlock.SetFloat("_DensityMultiplier", densityMultiplier);
             ctx.propertyBlock.SetFloat("_DarknessThreshold", darknessThreshold);
             ctx.propertyBlock.SetFloat("_StepSize", stepSize);
+            ctx.propertyBlock.SetFloat("_BlurQuality", blurQuality);
             ctx.propertyBlock.SetInt("_LightAbsorptionTowardSun", lightAbsorptionTowardSun);
         
             if (noiseGenerator.CurrentRenderTexture == null)
@@ -94,32 +99,37 @@ class CloudCustomPass : CustomPass
             HDUtils.DrawFullScreen(ctx.cmd, cloudMaterial, downSampleCloudBuffer, ctx.propertyBlock, shaderPassId: 0);
         }
 
-        using (new ProfilingScope(ctx.cmd, new ProfilingSampler("CloudCustomPass - Horizontal Blur")))
+        if (blurQuality < 1.0f)
         {
-            Vector2Int scaledViewportSize = source.GetScaledSize(source.rtHandleProperties.currentViewportSize);
-            ctx.propertyBlock.SetVector("_ViewPortSize",
-                new Vector4(scaledViewportSize.x, scaledViewportSize.y, 1.0f / scaledViewportSize.x,
-                    1.0f / scaledViewportSize.y));
-            
-            ctx.propertyBlock.SetTexture("_Source", downSampleCloudBuffer);
-            ctx.propertyBlock.SetFloat("_Radius", blurRadius / 4.0f);
-            
-            HDUtils.DrawFullScreen(ctx.cmd, cloudMaterial, downSampleBlurBuffer, ctx.propertyBlock, shaderPassId: 1);
+            using (new ProfilingScope(ctx.cmd, new ProfilingSampler("CloudCustomPass - Horizontal Blur")))
+            {
+                Vector2Int scaledViewportSize = source.GetScaledSize(source.rtHandleProperties.currentViewportSize);
+                ctx.propertyBlock.SetVector("_ViewPortSize",
+                    new Vector4(scaledViewportSize.x, scaledViewportSize.y, 1.0f / scaledViewportSize.x,
+                        1.0f / scaledViewportSize.y));
+
+                ctx.propertyBlock.SetTexture("_Source", downSampleCloudBuffer);
+                ctx.propertyBlock.SetFloat("_Radius", blurRadius * (blurQuality / 2.0f));
+
+                HDUtils.DrawFullScreen(ctx.cmd, cloudMaterial, downSampleBlurBuffer, ctx.propertyBlock,
+                    shaderPassId: 1);
+            }
+
+            using (new ProfilingScope(ctx.cmd, new ProfilingSampler("CloudCustomPass - Vertical Blur")))
+            {
+                Vector2Int scaledViewportSize = source.GetScaledSize(source.rtHandleProperties.currentViewportSize);
+                ctx.propertyBlock.SetVector("_ViewPortSize",
+                    new Vector4(scaledViewportSize.x, scaledViewportSize.y, 1.0f / scaledViewportSize.x,
+                        1.0f / scaledViewportSize.y));
+
+                ctx.propertyBlock.SetTexture("_Source", downSampleBlurBuffer);
+                ctx.propertyBlock.SetFloat("_Radius", blurRadius * (blurQuality / 2.0f));
+
+                HDUtils.DrawFullScreen(ctx.cmd, cloudMaterial, downSampleCloudBuffer, ctx.propertyBlock,
+                    shaderPassId: 2);
+            }
         }
 
-        using (new ProfilingScope(ctx.cmd, new ProfilingSampler("CloudCustomPass - Vertical Blur")))
-        {
-            Vector2Int scaledViewportSize = source.GetScaledSize(source.rtHandleProperties.currentViewportSize);
-            ctx.propertyBlock.SetVector("_ViewPortSize",
-                new Vector4(scaledViewportSize.x, scaledViewportSize.y, 1.0f / scaledViewportSize.x,
-                    1.0f / scaledViewportSize.y));
-        
-            ctx.propertyBlock.SetTexture("_Source", downSampleBlurBuffer);
-            ctx.propertyBlock.SetFloat("_Radius", blurRadius / 4.0f);
-            
-            HDUtils.DrawFullScreen(ctx.cmd, cloudMaterial, downSampleCloudBuffer, ctx.propertyBlock, shaderPassId: 2);
-        }
-        
         using (new ProfilingScope(ctx.cmd, new ProfilingSampler("CloudCustomPass - Composite")))
         {
             Vector2Int scaledViewportSize = source.GetScaledSize(source.rtHandleProperties.currentViewportSize);

@@ -44,6 +44,7 @@ Shader "Hidden/FullScreen/CloudShader"
     float _DensityMultiplier;
     float _DarknessThreshold;
     float _StepSize;
+    float _BlurQuality;
     int _LightAbsorptionTowardSun;
 
     //blur values:
@@ -122,8 +123,8 @@ Shader "Hidden/FullScreen/CloudShader"
 
     half4 DrawCloud(Varyings varyings) : SV_Target
     {       
-        float depth = LoadCameraDepth(varyings.positionCS.xy);
-        PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
+        float depth = LoadCameraDepth(varyings.positionCS.xy / _BlurQuality);
+        PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ScreenSize.zw / _BlurQuality, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
         float2 uv = posInput.positionNDC.xy * _RTHandleScale.xy;
 
         float3 rayPos = _WorldSpaceCameraPos;
@@ -141,7 +142,7 @@ Shader "Hidden/FullScreen/CloudShader"
         float3 entryPoint = rayPos + rayDir * dstToBox;
         
         float transmittance = 1;
-        float3 lightEnergy = 0;
+        float lightEnergy = 0;
         
         [loop] while (dstTraveled < dstLimit)
         {
@@ -163,7 +164,7 @@ Shader "Hidden/FullScreen/CloudShader"
             dstTraveled += stepSize;
         }
         
-        float4 color = float4((transmittance + lightEnergy).rg, (1 - transmittance.x), 1);
+        float4 color = float4(transmittance + lightEnergy, 0, 1 - transmittance, 1);
                 
         return color;
     }
@@ -171,7 +172,7 @@ Shader "Hidden/FullScreen/CloudShader"
     half4 HorizontalBlur(Varyings varyings) : SV_Target
     {        
         half depth = LoadCameraDepth(varyings.positionCS.xy);
-        PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ViewPortSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
+        PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ViewPortSize.zw / _BlurQuality, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
             
         half2 texcoord = posInput.positionNDC.xy * _RTHandleScale.xy;
         half texOffsetX = 0;
@@ -191,7 +192,7 @@ Shader "Hidden/FullScreen/CloudShader"
     half4 VerticalBlur(Varyings varyings) : SV_Target
     {        
         half depth = LoadCameraDepth(varyings.positionCS.xy);
-        PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ViewPortSize.zw, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
+        PositionInputs posInput = GetPositionInput(varyings.positionCS.xy, _ViewPortSize.zw / _BlurQuality, depth, UNITY_MATRIX_I_VP, UNITY_MATRIX_V);
             
         half2 texcoord = posInput.positionNDC.xy * _RTHandleScale.xy;
         half texOffsetY = 0;

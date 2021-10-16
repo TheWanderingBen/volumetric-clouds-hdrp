@@ -179,13 +179,13 @@ MonoBehaviour:
         noiseGenerator: {fileID: 105137645}
         cloudOffset: {x: 0, y: 0, z: 0}
         cloudScale: 8
-        densityThreshold: 0.167
-        densityMultiplier: 1.68
-        darknessThreshold: 0
-        stepSize: 0.2
+        densityThreshold: 0.2
+        densityMultiplier: 1.67
+        darknessThreshold: 0.25
+        stepSize: 1
         lightAbsorptionTowardSun: 20
-        blurRadius: 4
-        blurQuality: 0.1
+        blurRadius: 8
+        blurQuality: 0.33
 --- !u!114 &105137645
 MonoBehaviour:
   m_ObjectHideFlags: 0
